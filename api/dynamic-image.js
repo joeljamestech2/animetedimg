@@ -1,82 +1,64 @@
-import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
-import path from 'path';
-import fs from 'fs';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 
 export default async function handler(req, res) {
-  const width = 800;
-  const height = 400;
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d');
-
-  const bgPath = path.join(process.cwd(), 'public', 'back.jpg');
-  const bg = await loadImage(bgPath);
-  ctx.drawImage(bg, 0, 0, width, height);
-
-  // Font
   try {
-    const fontPath = path.join(process.cwd(), 'public', 'JetBrainsMono-Regular.ttf');
-    if (fs.existsSync(fontPath)) {
-      GlobalFonts.registerFromPath(fontPath, 'JetBrainsMono');
+    const width = 800;
+    const height = 400;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // 🔹 Query params
+    const imgUrl = req.query.imgurl;
+    let battery = parseInt(req.query.battery) || 50;
+    battery = Math.max(0, Math.min(100, battery));
+
+    if (!imgUrl) {
+      return res.status(400).send('imgurl query is required');
     }
-  } catch {}
 
-  // Time & Date
-  const now = new Date();
-  const hours = now.getHours() % 12 || 12;
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
-  const day = now.getDate().toString().padStart(2, '0');
-  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const month = monthNames[now.getMonth()];
-  const dayOfWeek = now.toLocaleString('en-US',{weekday:'short'});
+    // 🔹 Load background
+    const bg = await loadImage(imgUrl);
+    ctx.drawImage(bg, 0, 0, width, height);
 
-  ctx.fillStyle = 'white';
-  ctx.font = '40px JetBrainsMono';
-  ctx.fillText(`${hours}:${minutes} ${ampm}`, 600, 100);
-  ctx.font = '25px JetBrainsMono';
-  ctx.fillText(`${day}/${month} ${dayOfWeek}`, 600, 140);
+    // 🔹 Time & Date
+    const now = new Date();
+    const h = now.getHours() % 12 || 12;
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+    const day = now.getDate().toString().padStart(2, '0');
+    const month = now.toLocaleString('en-US', { month: 'short' });
+    const weekday = now.toLocaleString('en-US', { weekday: 'short' });
 
-  // Battery from query param
-  let batteryPercent = parseInt(req.query.battery) || 75; // default 75%
-  batteryPercent = Math.min(Math.max(batteryPercent, 0), 100);
+    // 🔹 Draw time/date
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 42px Arial';
+    ctx.fillText(`${h}:${m} ${ampm}`, 520, 90);
 
-  ctx.fillStyle = '#888';
-  ctx.fillRect(600, 160, 150, 20);
-  ctx.fillStyle = '#0f0';
-  ctx.fillRect(600, 160, 1.5 * batteryPercent, 20);
+    ctx.font = '22px Arial';
+    ctx.fillText(`${day}/${month} ${weekday}`, 520, 125);
 
-  // Progress bars
-  const totalTodaySeconds = 24*60*60;
-  const elapsedTodaySeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
-  const todayProgress = (elapsedTodaySeconds/totalTodaySeconds)*400;
+    // 🔹 Battery bar
+    ctx.fillStyle = '#333';
+    ctx.fillRect(520, 145, 200, 20);
 
-  ctx.fillStyle = '#555';
-  ctx.fillRect(50, 200, 400, 15);
-  ctx.fillStyle = '#0af';
-  ctx.fillRect(50, 200, todayProgress, 15);
+    ctx.fillStyle = battery > 20 ? '#00ff6a' : '#ff3b3b';
+    ctx.fillRect(520, 145, 2 * battery, 20);
 
-  const startOfYear = new Date(now.getFullYear(),0,1);
-  const elapsedYearSeconds = (now - startOfYear)/1000;
-  const totalYearSeconds = (new Date(now.getFullYear()+1,0,1) - startOfYear)/1000;
-  const yearProgress = (elapsedYearSeconds/totalYearSeconds)*400;
+    ctx.font = '18px Arial';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${battery}%`, 730, 162);
 
-  ctx.fillStyle = '#555';
-  ctx.fillRect(50, 230, 400, 15);
-  ctx.fillStyle = '#fa0';
-  ctx.fillRect(50, 230, yearProgress, 15);
+    // 🔹 Love text
+    ctx.font = '48px Arial';
+    ctx.fillStyle = 'pink';
+    ctx.fillText('❤️ love you ❤️', 40, 320);
 
-  // "love you" text
-  ctx.font = '50px JetBrainsMono';
-  ctx.fillStyle = 'pink';
-  ctx.fillText('❤️ love you ❤️', 50, 300);
+    // 🔹 Send image
+    res.setHeader('Content-Type', 'image/png');
+    res.status(200).send(canvas.toBuffer());
 
-  // Glowing hearts
-  for (let i=0;i<3;i++){
-    ctx.globalAlpha = 0.6;
-    ctx.fillText('💖', 100 + i*60, 260 - i*10);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Image generation failed');
   }
-  ctx.globalAlpha = 1;
-
-  res.setHeader('Content-Type','image/png');
-  res.status(200).send(canvas.toBuffer());
-                             }
+}
