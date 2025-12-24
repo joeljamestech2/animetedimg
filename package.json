@@ -1,8 +1,9 @@
 {
-  "name": "dynamic-image-api",
+  "name": "animetedimg",
   "version": "1.0.0",
+  "type": "module",
+  "author": "joeljamestech",
   "dependencies": {
-    "@napi-rs/canvas": "^0.7.0"
-  },
-  "type": "module"
+    "@napi-rs/canvas": "^0.1.67"
+  }
 }
