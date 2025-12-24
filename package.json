@@ -1,0 +1,8 @@
+{
+  "name": "dynamic-image-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "@napi-rs/canvas": "^0.7.0"
+  },
+  "type": "module"
+}
